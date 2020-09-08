@@ -5,19 +5,33 @@
  * @author akshayjaitly
  */
 
-
-import Util.SparkUtil
 import com.johnsnowlabs.nlp.annotator._
 import com.johnsnowlabs.nlp.base._
 import com.johnsnowlabs.util.Benchmark
 import org.apache.spark.ml.Pipeline
+import utils.SparkUtil
 
 object scalaNlpMain {
   def main(args: Array[String]): Unit = {
 
     val spark = SparkUtil.getSession
     val training_path = "src/labeled/labeled.txt"
-    val df = spark.read.text(training_path)
+    var df = spark.read.text(training_path)
+    import org.apache.spark.sql.functions.{when, _}
+    import spark.implicits._
+
+
+
+    df = df.withColumn("_tmp", split($"value", "\\.")).select(
+      $"_tmp".getItem(0).as("col1"),
+      $"_tmp".getItem(1).as("col2")
+    ).withColumn("col2",when(col("col2") === 0, "negative").otherwise("positive"))
+
+    import scala.util.Random
+    val data = 1 to 100 map(x =>  (1+Random.nextInt(100), 1+Random.nextInt(100), 1+Random.nextInt(100)))
+
+    val sqlContext = spark.sqlContext
+    sqlContext.createDataFrame(data).toDF("col1", "col2", "col3").show(false)
 
     df.show(false)
 
